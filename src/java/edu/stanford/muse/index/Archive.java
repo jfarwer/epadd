@@ -17,7 +17,10 @@
 	2022-09-05 	Added handling for IMAP
 	2022-09-09	Fixed bug in generateExportableAssetsNormalizedMbox
 	2022-10-03	Changed the fileformat to IMAP for IMAP import
-    2022-10-03 	Corrected function isMBOX() to check if the source is MBOX 
+    2022-10-03 	Corrected function isMBOX() to check if the source is MBOX
+    2022-10-04  Added file ID same as MBOX for IMAP
+    2022-10-13  Added SHA-256 in updateFileInBag
+    2022-10-19  Added PREMIS data export in JSON
  */
 package edu.stanford.muse.index;
 
@@ -725,7 +728,10 @@ int errortype=0;
 
                     fm = new Archive.FileMetadata();
                     fm.filename = doc1.emailSource;
-                    fm.fileID = folderName;
+// 2022-10-04                    
+//                    fm.fileID = folderName;
+                    fm.fileID = "Collection/IMAP/" + StringUtils.leftPad("" + count, 4, "0") + "/" + folderName;
+					
                     if (epaddPremis != null)
                     {
                         epaddPremis.setFileID(fm.fileID, folderName);
@@ -804,6 +810,8 @@ int errortype=0;
     public void printEpaddPremis() {
         if (epaddPremis != null) {
             epaddPremis.printToFiles();
+// 2022-10-19            
+            epaddPremis.export2JSON();
         }
     }
 
@@ -2532,14 +2540,24 @@ after maskEmailDomain.
     }
 */
 
+// 2022-10-13    
     //needed to make this method because sometime we want to update a bag without loading the whole archive.
-    public static void updateFileInBag(Bag archiveBag, String fileOrDirectoryName, String baseDir){
+    public static void updateFileInBag(Bag archiveBag, String fileOrDirectoryName, String baseDir) {
+        String[] manifestinfofilename = {"manifest-md5.txt", "manifest-sha256.txt"};
+        String[] algorithms = {"MD5", "SHA-256"};
         Path filepathname = Paths.get(fileOrDirectoryName);
         Path baginfofile = Paths.get(baseDir+File.separatorChar+"bag-info.txt");
-        Path manifestinfofile = Paths.get(baseDir +File.separatorChar+"manifest-md5.txt");
+//        Path manifestinfofile = Paths.get(baseDir +File.separatorChar+"manifest-md5.txt");
+        Path[] manifestinfofile = new Path[2];
+        for (int i=0; i<2; i++) manifestinfofile[i] = Paths.get(baseDir +File.separatorChar+manifestinfofilename[i]);
+        
         //updatePayloadManifests(bag, algorithms, includeHidden);
-        MessageDigest messageDigest = null;
-        Map<Manifest, MessageDigest> manifestToMessageDigest= new HashMap<>();
+//        MessageDigest messageDigest = null;
+//        Map<Manifest, MessageDigest> manifestToMessageDigest_md5 = new HashMap<>();
+        MessageDigest[] messageDigest = {null, null};
+        Map<Manifest, MessageDigest>[] manifestToMessageDigest = new Map[2];
+        manifestToMessageDigest[0] = new HashMap<>();
+        manifestToMessageDigest[1] = new HashMap<>();
         boolean includeHiddenFiles = false;
         //updateMetadataFile(bag, metadata);
 
@@ -2554,9 +2572,15 @@ after maskEmailDomain.
             e.printStackTrace();
         }
 
+        MessageDigest[] finalMessageDigest = new MessageDigest[2];
         try {
-            messageDigest = MessageDigest.getInstance(StandardSupportedAlgorithms.MD5.name());
-            MessageDigest finalMessageDigest = messageDigest;
+// 2022-10-13            
+//            messageDigest = MessageDigest.getInstance(StandardSupportedAlgorithms.MD5.name());
+//            MessageDigest[] finalMessageDigest = new MessageDigest[2];
+            for (int i=0; i<2; i++) {
+                messageDigest[i] = MessageDigest.getInstance(algorithms[i]);
+                finalMessageDigest[i] = messageDigest[i];
+            }    
             /*A very subtle bug was introduced. The case is as following; a file gets deleted from the directory but the manifest has entry for the deleted file as well.
             When the manifest construction algorithm is iterated over the directory tree then it recomputes the hash for all files present but it does not remove the hash for deleted files. As a result,
             although the file is deleted, its entry remains in the tag manifest file resulting in the failure of checksum. For fix; we remove entry for all those files
@@ -2568,15 +2592,28 @@ after maskEmailDomain.
                     !entry.getKey().startsWith(new File(fileOrDirectoryName).toPath())
                         ).collect(Collectors.toMap(Map.Entry::getKey,Map.Entry::getValue));
                 manifest.setFileToChecksumMap(mm);
-                manifestToMessageDigest.put(manifest, finalMessageDigest);
+//                manifestToMessageDigest.put(manifest, finalMessageDigest);
+                if ( manifest.getAlgorithm().toString().equals(algorithms[0])) manifestToMessageDigest[0].put(manifest, finalMessageDigest[0]);
+                else manifestToMessageDigest[1].put(manifest, finalMessageDigest[1]);
             });
-            CreatePayloadManifestsVistor sut = new CreatePayloadManifestsVistor(manifestToMessageDigest, includeHiddenFiles);
-            Files.walkFileTree(filepathname, sut);
+            
+            CreatePayloadManifestsVistor sut1 = new CreatePayloadManifestsVistor(manifestToMessageDigest[0], includeHiddenFiles);
+            Files.walkFileTree(filepathname, sut1);
+            //Files.walkFileTree(baginfofile,sut);
+            /////Now write payload manifest
+//            archiveBag.getPayLoadManifests().clear();
+//            archiveBag.getPayLoadManifests().addAll(manifestToMessageDigest[0].keySet());
+//            ManifestWriter.writePayloadManifests(archiveBag.getPayLoadManifests(), PathUtils.getBagitDir(archiveBag),archiveBag.getRootDir(),archiveBag.getFileEncoding());
+
+            CreatePayloadManifestsVistor sut2 = new CreatePayloadManifestsVistor(manifestToMessageDigest[1], includeHiddenFiles);
+            Files.walkFileTree(filepathname, sut2);
             //Files.walkFileTree(baginfofile,sut);
             /////Now write payload manifest
             archiveBag.getPayLoadManifests().clear();
-            archiveBag.getPayLoadManifests().addAll(manifestToMessageDigest.keySet());
+            archiveBag.getPayLoadManifests().addAll(manifestToMessageDigest[0].keySet());
+            archiveBag.getPayLoadManifests().addAll(manifestToMessageDigest[1].keySet());
             ManifestWriter.writePayloadManifests(archiveBag.getPayLoadManifests(), PathUtils.getBagitDir(archiveBag),archiveBag.getRootDir(),archiveBag.getFileEncoding());
+            
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -2585,16 +2622,37 @@ after maskEmailDomain.
 
         //updateTagManifests(bag, algorithms, includeHidden);
         try {
-            MessageDigest finalMessageDigest = messageDigest;
-            manifestToMessageDigest.clear();
-            archiveBag.getTagManifests().forEach(manifest->manifestToMessageDigest.put(manifest, finalMessageDigest));
-            final CreateTagManifestsVistor tagVistor = new CreateTagManifestsVistor(manifestToMessageDigest, includeHiddenFiles);
+//            MessageDigest finalMessageDigest = messageDigest;
+//            manifestToMessageDigest.clear();
+             manifestToMessageDigest[0].clear();
+             manifestToMessageDigest[1].clear();
+//            archiveBag.getTagManifests().forEach(manifest->manifestToMessageDigest.put(manifest, finalMessageDigest));             
+                 archiveBag.getTagManifests().forEach( manifest->{
+                        if ( manifest.getAlgorithm().toString().equals(algorithms[0])) manifestToMessageDigest[0].put(manifest, finalMessageDigest[0]);
+                        else  manifestToMessageDigest[1].put(manifest, finalMessageDigest[1]);
+                    }    
+                );
+//            final CreateTagManifestsVistor tagVistor = new CreateTagManifestsVistor(manifestToMessageDigest, includeHiddenFiles);
+            final CreateTagManifestsVistor tagVistor1 = new CreateTagManifestsVistor(manifestToMessageDigest[0], includeHiddenFiles);
             //Files.walkFileTree(filepathname, tagVistor);
-            Files.walkFileTree(baginfofile,tagVistor);
-            Files.walkFileTree(manifestinfofile,tagVistor);
+//            Files.walkFileTree(manifestinfofile,tagVistor);
+            Files.walkFileTree(baginfofile,tagVistor1);
+            Files.walkFileTree(manifestinfofile[0],tagVistor1);
+            Files.walkFileTree(manifestinfofile[1],tagVistor1);
+            //update bag'stagemanifest
+//            archiveBag.getTagManifests().clear();
+//            archiveBag.getTagManifests().addAll(manifestToMessageDigest[0].keySet());
+//            ManifestWriter.writeTagManifests(archiveBag.getTagManifests(), PathUtils.getBagitDir(archiveBag), archiveBag.getRootDir(), archiveBag.getFileEncoding());
+
+            final CreateTagManifestsVistor tagVistor2 = new CreateTagManifestsVistor(manifestToMessageDigest[1], includeHiddenFiles);
+            //Files.walkFileTree(filepathname, tagVistor);
+            Files.walkFileTree(baginfofile,tagVistor2);
+            Files.walkFileTree(manifestinfofile[0],tagVistor2);
+            Files.walkFileTree(manifestinfofile[1],tagVistor2);
             //update bag'stagemanifest
             archiveBag.getTagManifests().clear();
-            archiveBag.getTagManifests().addAll(manifestToMessageDigest.keySet());
+            archiveBag.getTagManifests().addAll(manifestToMessageDigest[0].keySet());
+            archiveBag.getTagManifests().addAll(manifestToMessageDigest[1].keySet());
             ManifestWriter.writeTagManifests(archiveBag.getTagManifests(), PathUtils.getBagitDir(archiveBag), archiveBag.getRootDir(), archiveBag.getFileEncoding());
         } catch (IOException e) {
             e.printStackTrace();

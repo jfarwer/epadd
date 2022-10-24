@@ -10,6 +10,9 @@ package edu.stanford.muse.epaddpremis;//Example: ingest
 //        MORE ITERATIONS OF THIS FIELD?)
 //
 //        package edu.stanford.muse.epaddpremis;
+/*
+	2022-10-19	Added JSON export
+*/
 
 import edu.stanford.epadd.Version;
 import edu.stanford.muse.epaddpremis.premisfile.File;
@@ -21,6 +24,9 @@ import gov.loc.repository.bagit.domain.Bag;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
+// 2022-10-19
+import org.json.JSONException;
+import org.json.XML;
 
 import javax.xml.XMLConstants;
 import javax.xml.bind.JAXBContext;
@@ -48,6 +54,9 @@ public class EpaddPremis implements Serializable {
 
     @XmlTransient
     public static final String SERIALIZED_FILE_NAME = "premisobject.ser";
+
+    @XmlTransient
+    private static final String JSON_FILE_NAME = "epaddPremis.json";
 
     @XmlTransient
     private static final Logger log = LogManager.getLogger(EpaddPremis.class);
@@ -248,6 +257,39 @@ public class EpaddPremis implements Serializable {
     private String getSerializedPathAndFileName() {
         return pathToDataFolder + java.io.File.separatorChar + SERIALIZED_FILE_NAME;
     }
+
+// 2022-10-19
+    public void export2JSON() {
+            InputStream inputStream = null;
+            BufferedWriter bufferedWriter = null;
+            try {
+                java.io.File xmlfile = new java.io.File (pathToDataFolder + java.io.File.separatorChar + XML_FILE_NAME);
+                inputStream = new FileInputStream(xmlfile);  
+                StringBuilder builder =  new StringBuilder();  
+                int ptr = 0;  
+                while ((ptr = inputStream.read()) != -1 ) {  
+                    builder.append((char) ptr); 
+                }  
+                String xml  = builder.toString();  
+                JSONObject jsonObj = XML.toJSONObject(xml);   
+            // Assume default encoding.
+                FileWriter fileWriter =  new FileWriter(pathToDataFolder + java.io.File.separatorChar + JSON_FILE_NAME);
+                bufferedWriter = new BufferedWriter(fileWriter);
+
+                for(int i= 0 ;i < jsonObj.toString().split(",").length; i ++) {
+                    bufferedWriter.write(jsonObj.toString().split(",")[i]);
+                    bufferedWriter.write("\n");
+                }
+                		
+            } catch (IOException | JSONException e) {
+                Util.print_exception("Exception in EpaddPremis.export2JSON() ", e, LogManager.getLogger(EpaddPremis.class)); 
+            } finally {
+                try {
+                    if (inputStream != null) inputStream.close();
+                    if (bufferedWriter != null) bufferedWriter.close();	
+                } catch (IOException e) {}   
+            }
+    }	
 
     public void printToFiles() {
         getIntellectualEntity().updateSignificantPropertiesSet();
