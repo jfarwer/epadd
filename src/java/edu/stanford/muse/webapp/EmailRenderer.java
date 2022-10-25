@@ -1,4 +1,5 @@
 /*
+    2022-08-31	Archive re-opened
     2022-09-14   Null Object handling
 */
 package edu.stanford.muse.webapp;
@@ -54,6 +55,11 @@ public class EmailRenderer {
 		JSPHelper.log.debug("Generating HTML for document: " + d);
 		EmailDocument ed = null;
 		Archive archive = searchResult.getArchive();
+// 2022-08-31		
+		if (archive != null) {
+			archive.close();
+			archive.openForRead();
+		}	
 		String html = null;
 		boolean overflow = false;
 		if (d instanceof EmailDocument) {
