@@ -12,6 +12,7 @@ package edu.stanford.muse.epaddpremis;//Example: ingest
 //        package edu.stanford.muse.epaddpremis;
 /*
 	2022-10-19	Added JSON export
+	2022-11-01	Moved export2JSON() into printToFiles(), overwrite JSON file, update checksum for JSON file
 */
 
 import edu.stanford.epadd.Version;
@@ -258,6 +259,11 @@ public class EpaddPremis implements Serializable {
         return pathToDataFolder + java.io.File.separatorChar + SERIALIZED_FILE_NAME;
     }
 
+// 2022-11-01
+    private String getJsonPathAndFileName() {
+        return pathToDataFolder + java.io.File.separatorChar + JSON_FILE_NAME;
+    }
+
 // 2022-10-19
     public void export2JSON() {
             InputStream inputStream = null;
@@ -273,7 +279,9 @@ public class EpaddPremis implements Serializable {
                 String xml  = builder.toString();  
                 JSONObject jsonObj = XML.toJSONObject(xml);   
             // Assume default encoding.
-                FileWriter fileWriter =  new FileWriter(pathToDataFolder + java.io.File.separatorChar + JSON_FILE_NAME);
+// 2022-11-01  			
+//                FileWriter fileWriter =  new FileWriter(pathToDataFolder + java.io.File.separatorChar + JSON_FILE_NAME);
+				FileWriter fileWriter =  new FileWriter(getJsonPathAndFileName(), false);
                 bufferedWriter = new BufferedWriter(fileWriter);
 
                 for(int i= 0 ;i < jsonObj.toString().split(",").length; i ++) {
@@ -304,6 +312,9 @@ public class EpaddPremis implements Serializable {
             Marshaller marshaller = jc.createMarshaller();
             marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
             marshaller.marshal(this, new java.io.File(getXmlPathAndFileName()));
+// 2022-11-01            
+            export2JSON();
+			
             Bag bag = Archive.readArchiveBag(baseDir);
             if (bag == null) {
                 log.warn("bag null in EpaddPremis.printToFile()");
@@ -314,6 +325,8 @@ public class EpaddPremis implements Serializable {
                 return;
             }
             Archive.updateFileInBag(bag, getXmlPathAndFileName(), baseDir);
+// 2022-11-01            
+            Archive.updateFileInBag(bag, getJsonPathAndFileName(), baseDir);    
             archive.setArchiveBag(bag);
         } catch (Exception e) {
             Util.print_exception("Exception in EpaddPremis.printToFile() ", e, LogManager.getLogger(EpaddPremis.class));

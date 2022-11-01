@@ -21,6 +21,7 @@
     2022-10-04  Added file ID same as MBOX for IMAP
     2022-10-13  Added SHA-256 in updateFileInBag
     2022-10-19  Added PREMIS data export in JSON
+	2022-11-01  Moved export2JSON() into epaddPremis.printToFiles()
  */
 package edu.stanford.muse.index;
 
@@ -810,8 +811,8 @@ int errortype=0;
     public void printEpaddPremis() {
         if (epaddPremis != null) {
             epaddPremis.printToFiles();
-// 2022-10-19            
-            epaddPremis.export2JSON();
+// 2022-10-19, 2022-11-01            
+//            epaddPremis.export2JSON();
         }
     }
 
