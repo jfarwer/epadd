@@ -13,6 +13,7 @@ package edu.stanford.muse.epaddpremis;//Example: ingest
 /*
 	2022-10-19	Added JSON export
 	2022-11-01	Moved export2JSON() into printToFiles(), overwrite JSON file, update checksum for JSON file
+	2022-11-03	Added createEvent(EpaddEvent.EventType eventType, String eventDetailInformation, String outcome, ZonedDateTime date1)
 */
 
 import edu.stanford.epadd.Version;
@@ -46,6 +47,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+// 2022-11-03
+import java.time.ZonedDateTime;
 
 @XmlRootElement(name = "premis")
 public class EpaddPremis implements Serializable {
@@ -202,6 +205,11 @@ public class EpaddPremis implements Serializable {
         epaddEvents.add(new EpaddEvent(eventType, eventDetailInformation, outcome, ModeConfig.getModeForDisplay(ArchiveReaderWriter.getArchiveIDForArchive(archive))));
         printToFiles();
 
+    }
+// 2022-11-03
+    public void createEvent(EpaddEvent.EventType eventType, String eventDetailInformation, String outcome, ZonedDateTime date1) {
+        epaddEvents.add(new EpaddEvent(eventType, eventDetailInformation, outcome, ModeConfig.getModeForDisplay(ArchiveReaderWriter.getArchiveIDForArchive(archive)), date1));
+        printToFiles();
     }
 
     public void addToSignificantProperty(String type, int value) {
