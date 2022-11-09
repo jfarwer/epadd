@@ -22,6 +22,7 @@
     2022-10-13  Added SHA-256 in updateFileInBag
     2022-10-19  Added PREMIS data export in JSON
 	2022-11-01  Moved export2JSON() into epaddPremis.printToFiles()
+	2022-11-09	Added function getSidecarDir()
  */
 package edu.stanford.muse.index;
 
@@ -3315,5 +3316,10 @@ BagCreator.bagInPlace(Paths.get(userDir),Arrays.asList(algorithm),false);
         return returnCode;
     }
 // 2022-09-05
+
+// 2022-11-09    
+    public String getSidecarDir() {
+        return baseDir + File.separator + BAG_DATA_FOLDER + File.separator + SIDECAR_DIR;
+    }
 	
 }

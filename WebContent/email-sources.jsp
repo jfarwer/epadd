@@ -9,7 +9,11 @@
 <%--
 	<%@ page import="Internationalisation.ReadFromProp"%>
 --%>
-
+<%
+/*    
+    2022-11-09  Added Sidecar file listing
+*/    
+%>
 
 <!DOCTYPE HTML>
 <html>
@@ -255,6 +259,12 @@ if (archive != null) {
 				<br/>
 			</div>
 			<p></p>
+			
+            <% if (archiveID != null) { %>
+                <button id="manage-sidecar-btn" class="btn-default" onclick="return goSidecarFiles();"><i class="fa fa-files-o fa-2x" aria-hidden="true"></i>&nbsp; 
+                <%=edu.stanford.muse.util.Messages.getMessage(archiveID, "messages", "sidecar.management-title")%>
+                </button>
+            <% } %>                            
 		</div>
 <div>
 </form>
@@ -310,6 +320,13 @@ if (archive != null) {
 <jsp:include page="footer.jsp"/>
 
 	<script>
+// 2022-11-09            
+        function goSidecarFiles() {
+            url = "sidecarFiles?archiveID=<%=archiveID%>";
+            window.location.href = url;
+            return false;
+        }
+	
 		var uploadSidecarHandler=function() {
 			var sidecarfilenameWithFakepath = $('#sidecarfile').val();
 			debugger
